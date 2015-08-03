@@ -16,6 +16,7 @@ import android.widget.Toast;
 
 import com.ace.project.complex.Complex;
 import com.ace.project.signalprocess.eeg.concentration.Concentration;
+import com.ace.project.signalprocess.eeg.concentration.Hurst;
 import com.ace.project.signalprocess.eeg.power.EegPower;
 import com.ace.project.signalprocess.filter.Window;
 import com.ace.project.signalprocess.power.SignalPower;
@@ -187,6 +188,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
                             power3 = EegPower.calcBeta(eegFFT, SAMPLERATE_EEG);
                             power4 = EegPower.calcGamma(eegFFT, SAMPLERATE_EEG);
                             concentration = Concentration.calcConcentration(eegFFT, SAMPLERATE_EEG);
+                            hurst = Hurst.calHurst(eegData1);
 
                             endchecktime = System.nanoTime();
 
@@ -217,6 +219,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
                             addEntry(seriesBeta, power3);
                             addEntry(seriesGamma, power4);
                             addEntry(seriesConcentration, 50 * concentration);
+                            addEntry(seriesHurst, 20 * hurst);
 
                             double[] freqpower = SignalPower.calcPower(eegFFT);
                             updateFreq(seriesFreq, freqpower);
@@ -306,7 +309,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private double[] eegData4 = new double[SAMPLERATE_EEG];
     private Complex[] eegFFT;
 
-    double power1, power2, power3, power4, concentration;
+    double power1, power2, power3, power4, concentration, hurst;
 
     private int eegIdx = 0;
     private long startchecktime = 0;
@@ -324,7 +327,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private LineGraphSeries<DataPoint> seriesBeta;
     private LineGraphSeries<DataPoint> seriesGamma;
     private LineGraphSeries<DataPoint> seriesConcentration;
+    private LineGraphSeries<DataPoint> seriesHurst;
     private LineGraphSeries<DataPoint> seriesFreq;
+
 
     private int lastX = 0;
     private int graphLastXValue = 5;
@@ -389,20 +394,25 @@ public class MainActivity extends Activity implements View.OnClickListener {
         seriesBeta = new LineGraphSeries<DataPoint>(new DataPoint[]{});
         seriesGamma = new LineGraphSeries<DataPoint>(new DataPoint[]{});
         seriesConcentration = new LineGraphSeries<DataPoint>(new DataPoint[]{});
+        seriesHurst = new LineGraphSeries<DataPoint>(new DataPoint[]{});
         seriesFreq = new LineGraphSeries<DataPoint>(new DataPoint[]{});
+
 
         graph.addSeries(seriesTheta);
         graph.addSeries(seriesAlpha);
         graph.addSeries(seriesBeta);
         graph.addSeries(seriesGamma);
         graph.addSeries(seriesConcentration);
+        graph.addSeries(seriesHurst);
         graphFreq.addSeries(seriesFreq);
         seriesTheta.setColor(Color.parseColor("#b98e8e"));
         seriesAlpha.setColor(Color.parseColor("#0024ff"));
         seriesBeta.setColor(Color.parseColor("#00ff0c"));
         seriesGamma.setColor(Color.parseColor("#8400ff"));
         seriesConcentration.setColor(Color.parseColor("#ff0000"));
+        seriesHurst.setColor(Color.parseColor("#00ffcc"));
         seriesFreq.setColor(Color.parseColor("#020202"));
+        seriesFreq.setBackgroundColor(Color.parseColor("#020202"));
 
 
         seriesTheta.setTitle("Theta");
@@ -410,6 +420,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
         seriesBeta.setTitle("Beta");
         seriesGamma.setTitle("Gamma");
         seriesConcentration.setTitle("Concentration");
+        seriesHurst.setTitle("Hurst");
+
         graph.getLegendRenderer().setVisible(true);
         graph.getLegendRenderer().setAlign(LegendRenderer.LegendAlign.TOP);
 
@@ -425,7 +437,10 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private void updateFreq(LineGraphSeries<DataPoint> series, double[] power) {
         DataPoint[] data = new DataPoint[50];
         for (int i = 0; i < 50; i++)
+        {
             data[i] = new DataPoint(i, power[i]);
+        }
+
 
         series.resetData(data);
     }
