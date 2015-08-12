@@ -171,8 +171,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
                             double leftForehead = data.get(Eeg.FP1.ordinal());
                             double rightForehead = data.get(Eeg.FP2.ordinal());
 
-                            eegData1[eegIdx] = (leftForehead + rightForehead) / 2;
-                            eegData2[eegIdx] = (rightEar + leftEar);
+                            eegData[eegIdx] = (leftForehead + rightForehead + rightEar + leftEar) / 4;
 
                             eegIdx++;
                         }
@@ -181,37 +180,24 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
                             startchecktime = System.nanoTime();
 
-                            eegFFT = FFT.fft(Window.HammingWindow220Hz(eegData1), false);
+                            eegFFT = FFT.fft(Window.HammingWindow220Hz(eegData), false);
 
                             power1 = EegPower.calcTheta(eegFFT, SAMPLERATE_EEG);
                             power2 = EegPower.calcAlpha(eegFFT, SAMPLERATE_EEG);
                             power3 = EegPower.calcBeta(eegFFT, SAMPLERATE_EEG);
                             power4 = EegPower.calcGamma(eegFFT, SAMPLERATE_EEG);
                             concentration = Concentration.calcConcentration(eegFFT, SAMPLERATE_EEG);
-                            hurst = Hurst.calHurst(eegData1);
+                            hurst = Hurst.calHurst(eegData);
 
                             endchecktime = System.nanoTime();
 
-/*
-                            power1 = 1000 * SignalPower.calcTheta(eegData1, SAMPLERATE_EEG);
-                            power2 = 1000 * SignalPower.calcAlpha(eegData1, SAMPLERATE_EEG);
-                            power3 = 1000 * SignalPower.calcBeta(eegData1, SAMPLERATE_EEG);
-                            power4 = 1000 * SignalPower.calcGamma(eegData1, SAMPLERATE_EEG);
-
- */
-                            /*
-                            power1 = 1000;
-                            power2 = 1000;
-                            power3 = 1000;
-                            power4 = 1000;
-                            */
-                            theta.setText(String.format(
+                            theta.setText("Theta " + String.format(
                                     "%6.2f", power1));
-                            alpha.setText(String.format(
+                            alpha.setText("Alpha " + String.format(
                                     "%6.2f", power2));
-                            beta.setText(String.format(
+                            beta.setText("Beta " + String.format(
                                     "%6.2f", power3));
-                            gamma.setText(String.format(
+                            gamma.setText("Gamma " + String.format(
                                     "%6.2f", power4));
 
                             addEntry(seriesTheta, power1); // draw graph
@@ -303,10 +289,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private static final int SAMPLERATE_ACC = 50;
 
     // ArrayList that contains eegData
-    private double[] eegData1 = new double[SAMPLERATE_EEG];
-    private double[] eegData2 = new double[SAMPLERATE_EEG];
-    private double[] eegData3 = new double[SAMPLERATE_EEG];
-    private double[] eegData4 = new double[SAMPLERATE_EEG];
+    private double[] eegData = new double[SAMPLERATE_EEG];
     private Complex[] eegFFT;
 
     double power1, power2, power3, power4, concentration, hurst;
