@@ -71,6 +71,12 @@
             />
     </LinearLayout>
 
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:text="reset data"
+        android:id="@+id/reset"/>
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -159,11 +165,23 @@
     </LinearLayout>
 
 
-
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:text="Feature Graph"/>
     <com.jjoe64.graphview.GraphView
         android:layout_width="match_parent"
         android:layout_height="200dip"
         android:id="@+id/graph" />
+    <CheckBox
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:text="legend"
+        android:id="@+id/check_legend"/>
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:text="Power Spectrum"/>
     <com.jjoe64.graphview.GraphView
         android:layout_width="match_parent"
         android:layout_height="200dip"
