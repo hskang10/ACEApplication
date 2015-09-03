@@ -10,6 +10,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -103,7 +104,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
         }
     }
 
-
     class DataListener extends MuseDataListener {
 
         final WeakReference<Activity> activityRef;
@@ -171,8 +171,10 @@ public class MainActivity extends Activity implements View.OnClickListener {
                             double leftForehead = data.get(Eeg.FP1.ordinal());
                             double rightForehead = data.get(Eeg.FP2.ordinal());
 
-                            eegData1[eegIdx] = (leftForehead + rightForehead) / 2;
-                            eegData2[eegIdx] = (rightEar + leftEar);
+                            eegData1[eegIdx] = leftForehead;
+                            eegData2[eegIdx] = rightForehead;
+                            eegData3[eegIdx] = leftEar;
+                            eegData4[eegIdx] = rightEar;
 
                             eegIdx++;
                         }
@@ -188,23 +190,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
                             power3 = EegPower.calcBeta(eegFFT, SAMPLERATE_EEG);
                             power4 = EegPower.calcGamma(eegFFT, SAMPLERATE_EEG);
                             concentration = Concentration.calcConcentration(eegFFT, SAMPLERATE_EEG);
-                            hurst = Hurst.calHurst(eegData1);
 
                             endchecktime = System.nanoTime();
 
-/*
-                            power1 = 1000 * SignalPower.calcTheta(eegData1, SAMPLERATE_EEG);
-                            power2 = 1000 * SignalPower.calcAlpha(eegData1, SAMPLERATE_EEG);
-                            power3 = 1000 * SignalPower.calcBeta(eegData1, SAMPLERATE_EEG);
-                            power4 = 1000 * SignalPower.calcGamma(eegData1, SAMPLERATE_EEG);
-
- */
-                            /*
-                            power1 = 1000;
-                            power2 = 1000;
-                            power3 = 1000;
-                            power4 = 1000;
-                            */
                             theta.setText(String.format(
                                     "%6.2f", power1));
                             alpha.setText(String.format(
@@ -219,7 +207,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
                             addEntry(seriesBeta, power3);
                             addEntry(seriesGamma, power4);
                             addEntry(seriesConcentration, 50 * concentration);
-                            addEntry(seriesHurst, 20 * hurst);
 
                             double[] freqpower = SignalPower.calcPower(eegFFT);
                             updateFreq(seriesFreq, freqpower);
@@ -277,10 +264,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
                         if (data.get(Eeg.TP10.ordinal()) <= 3.0)
                             horseshoe3.setText("FIT");
-                        else
-                            horseshoe3.setText("X");
-
-//                        horseshoe3.setText(String.format("%6.2f", data.get(Eeg.TP10.ordinal())));
+                        else horseshoe3.setText("X");
 
                     }
                 });
@@ -309,7 +293,14 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private double[] eegData4 = new double[SAMPLERATE_EEG];
     private Complex[] eegFFT;
 
-    double power1, power2, power3, power4, concentration, hurst;
+    private LineGraphSeries<DataPoint> seriesTheta;
+    private LineGraphSeries<DataPoint> seriesAlpha;
+    private LineGraphSeries<DataPoint> seriesBeta;
+    private LineGraphSeries<DataPoint> seriesGamma;
+    private LineGraphSeries<DataPoint> seriesConcentration;
+    private LineGraphSeries<DataPoint> seriesFreq;
+
+    double power1, power2, power3, power4, concentration;
 
     private int eegIdx = 0;
     private long startchecktime = 0;
@@ -318,17 +309,10 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
     GraphView graph;
     GraphView graphFreq;
-
     Viewport viewport;
     Viewport viewportfreq;
 
-    private LineGraphSeries<DataPoint> seriesTheta;
-    private LineGraphSeries<DataPoint> seriesAlpha;
-    private LineGraphSeries<DataPoint> seriesBeta;
-    private LineGraphSeries<DataPoint> seriesGamma;
-    private LineGraphSeries<DataPoint> seriesConcentration;
-    private LineGraphSeries<DataPoint> seriesHurst;
-    private LineGraphSeries<DataPoint> seriesFreq;
+
 
 
     private int lastX = 0;
@@ -365,6 +349,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
         dataListener.setFileWriter(fileWriter);
 
 
+        CheckBox check0 = (CheckBox) findViewById(R.id.check0);
+        check0.setOnClickListener(this);
+
         graph = (GraphView) findViewById(R.id.graph);
         graphFreq = (GraphView) findViewById(R.id.graphfreq);
 
@@ -394,7 +381,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
         seriesBeta = new LineGraphSeries<DataPoint>(new DataPoint[]{});
         seriesGamma = new LineGraphSeries<DataPoint>(new DataPoint[]{});
         seriesConcentration = new LineGraphSeries<DataPoint>(new DataPoint[]{});
-        seriesHurst = new LineGraphSeries<DataPoint>(new DataPoint[]{});
         seriesFreq = new LineGraphSeries<DataPoint>(new DataPoint[]{});
 
 
@@ -403,14 +389,12 @@ public class MainActivity extends Activity implements View.OnClickListener {
         graph.addSeries(seriesBeta);
         graph.addSeries(seriesGamma);
         graph.addSeries(seriesConcentration);
-        graph.addSeries(seriesHurst);
         graphFreq.addSeries(seriesFreq);
         seriesTheta.setColor(Color.parseColor("#b98e8e"));
         seriesAlpha.setColor(Color.parseColor("#0024ff"));
         seriesBeta.setColor(Color.parseColor("#00ff0c"));
         seriesGamma.setColor(Color.parseColor("#8400ff"));
         seriesConcentration.setColor(Color.parseColor("#ff0000"));
-        seriesHurst.setColor(Color.parseColor("#00ffcc"));
         seriesFreq.setColor(Color.parseColor("#020202"));
         seriesFreq.setBackgroundColor(Color.parseColor("#020202"));
 
@@ -420,7 +404,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
         seriesBeta.setTitle("Beta");
         seriesGamma.setTitle("Gamma");
         seriesConcentration.setTitle("Concentration");
-        seriesHurst.setTitle("Hurst");
 
         graph.getLegendRenderer().setVisible(true);
         graph.getLegendRenderer().setAlign(LegendRenderer.LegendAlign.TOP);
@@ -437,10 +420,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private void updateFreq(LineGraphSeries<DataPoint> series, double[] power) {
         DataPoint[] data = new DataPoint[50];
         for (int i = 0; i < 50; i++)
-        {
             data[i] = new DataPoint(i, power[i]);
-        }
-
 
         series.resetData(data);
     }
@@ -460,8 +440,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
             ArrayAdapter<String> adapterArray = new ArrayAdapter<String>(
                     this, android.R.layout.simple_spinner_item, spinnerItems);
             musesSpinner.setAdapter(adapterArray);
-
-            Toast.makeText(getApplicationContext(), "REFRESH", Toast.LENGTH_LONG).show();
 
 
         } else if (v.getId() == R.id.connect) {
