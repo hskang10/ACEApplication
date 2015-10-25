@@ -1,9 +1,12 @@
 package com.eeg.aceapplication;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -276,6 +279,17 @@ public class MainActivity extends Activity implements View.OnClickListener {
         }
     }
 
+    private static final String TAG = "Main";
+
+    // Intent request code
+    private static final int REQUEST_CONNECT_DEVICE = 1;
+    private static final int REQUEST_ENABLE_BT = 2;
+
+    private Button btn_Connect;
+    private TextView txt_Result;
+
+    private BluetoothService btService = null;
+
     private Muse muse = null;
     private ConnectionListener connectionListener = null;
     private DataListener dataListener = null;
@@ -283,8 +297,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private MuseFileWriter fileWriter = null;
 
     private static final int SAMPLERATE_EEG = 220;
-    private static final int SAMPLERATE_2 = 256;
-    private static final int SAMPLERATE_ACC = 50;
 
     // ArrayList that contains eegData
     private double[] eegData1 = new double[SAMPLERATE_EEG];
@@ -312,11 +324,22 @@ public class MainActivity extends Activity implements View.OnClickListener {
     Viewport viewport;
     Viewport viewportfreq;
 
+    public static String EXTRA_DEVICE_ADDRESS = "device_address";
+
 
 
 
     private int lastX = 0;
     private int graphLastXValue = 5;
+
+    private final Handler mHandler = new Handler() {
+
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+        }
+
+    };
 
 
     public MainActivity() {
@@ -340,6 +363,13 @@ public class MainActivity extends Activity implements View.OnClickListener {
         disconnectButton.setOnClickListener(this);
         Button pauseButton = (Button) findViewById(R.id.pause);
         pauseButton.setOnClickListener(this);
+
+        btn_Connect = (Button) findViewById(R.id.button_on);
+        btn_Connect.setOnClickListener(this);
+
+        if(btService == null) {
+            btService = new BluetoothService(this, mHandler);
+        }
 
         fileWriter = MuseFileWriterFactory.getMuseFileWriter(new File(
                 getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
@@ -479,7 +509,40 @@ public class MainActivity extends Activity implements View.OnClickListener {
                 muse.enableDataTransmission(dataTransmission);
             }
         }
+
+        else if(v.getId() == R.id.button_on) {
+            if (btService.getDeviceState()) {
+                btService.enableBluetooth();
+            } else {
+                finish();
+            }
+        }
     }
+
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        Log.d(TAG, "onActivityResult " + resultCode);
+
+        switch (requestCode) {
+
+            case REQUEST_ENABLE_BT:
+                // When the request to enable Bluetooth returns
+                if (resultCode == Activity.RESULT_OK) {
+
+                } else {
+
+                    Log.d(TAG, "Bluetooth is not enabled");
+                }
+                break;
+            case REQUEST_CONNECT_DEVICE:
+                if(resultCode == Activity.RESULT_OK) {
+                    Log.d(TAG, "REQUEST_CONNECT_DEVICE");
+                    btService.getDeviceInfo(data);
+                }
+                break;
+        }
+    }
+
+
 
     private void configure_library() {
         muse.registerConnectionListener(connectionListener);

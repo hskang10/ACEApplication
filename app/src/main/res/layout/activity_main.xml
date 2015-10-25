@@ -1,14 +1,13 @@
 <ScrollView
     android:layout_height="wrap_content"
     android:layout_width="wrap_content"
-    layout_width="wrap_content"
-    layout_height="wrap_content"
     xmlns:android="http://schemas.android.com/apk/res/android">
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:orientation="vertical"
               android:layout_width="match_parent"
               android:layout_height="match_parent">
-        <Spinner
+
+    <Spinner
             android:id="@+id/muses_spinner"
             android:layout_width="match_parent"
             android:layout_height="60dp"
@@ -32,6 +31,12 @@
             android:layout_width="120dp"
             android:layout_height="40dp"
             android:text="@string/disconnect" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="33dp"
+            android:text="on"
+            android:id="@+id/button_on"/>
     </LinearLayout>
     <LinearLayout
         android:layout_width="match_parent"
@@ -172,6 +177,7 @@
         android:layout_width="match_parent"
         android:layout_height="200dip"
         android:id="@+id/graphfreq" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="30dp"
