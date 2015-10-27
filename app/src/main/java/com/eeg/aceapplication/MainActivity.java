@@ -1,6 +1,8 @@
 package com.eeg.aceapplication;
 
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -216,6 +218,12 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
                             eegIdx = 0;
                             lastX++;
+
+                            if(btService.getState() == BluetoothService.STATE_CONNECTED)
+                            {
+                                byte[] ch = new byte[]{(byte)0x0A, (byte)0xAB};
+                                btService.write(ch);
+                            }
                         }
                     }
                 });
@@ -326,7 +334,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
     public static String EXTRA_DEVICE_ADDRESS = "device_address";
 
-
+    private BluetoothAdapter mBluetoothAdapter = null;
 
 
     private int lastX = 0;
@@ -370,6 +378,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
         if(btService == null) {
             btService = new BluetoothService(this, mHandler);
         }
+
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
         fileWriter = MuseFileWriterFactory.getMuseFileWriter(new File(
                 getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
@@ -509,14 +519,14 @@ public class MainActivity extends Activity implements View.OnClickListener {
                 muse.enableDataTransmission(dataTransmission);
             }
         }
-
+/*
         else if(v.getId() == R.id.button_on) {
             if (btService.getDeviceState()) {
                 btService.enableBluetooth();
             } else {
                 finish();
             }
-        }
+        }*/
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -536,10 +546,21 @@ public class MainActivity extends Activity implements View.OnClickListener {
             case REQUEST_CONNECT_DEVICE:
                 if(resultCode == Activity.RESULT_OK) {
                     Log.d(TAG, "REQUEST_CONNECT_DEVICE");
-                    btService.getDeviceInfo(data);
+                    connectDevice(data, false);
                 }
                 break;
         }
+    }
+
+    private void connectDevice(Intent data, boolean secure) {
+        // Get the device MAC address
+        String address = data.getExtras()
+                .getString(DeviceListActivity.EXTRA_DEVICE_ADDRESS);
+        Log.d("TEST", address);
+        // Get the BluetoothDevice object
+        BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
+        // Attempt to connect to the device
+        btService.connect(device, secure);
     }
 
 
@@ -576,6 +597,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            Intent serverIntent = new Intent(this, DeviceListActivity.class);
+            startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE);
             return true;
         }
 
