@@ -18,11 +18,9 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.ace.project.complex.Complex;
 import com.ace.project.signalprocess.eeg.concentration.Concentration;
-import com.ace.project.signalprocess.eeg.concentration.Hurst;
 import com.ace.project.signalprocess.eeg.power.EegPower;
 import com.ace.project.signalprocess.filter.Window;
 import com.ace.project.signalprocess.power.SignalPower;
@@ -371,9 +369,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
         disconnectButton.setOnClickListener(this);
         Button pauseButton = (Button) findViewById(R.id.pause);
         pauseButton.setOnClickListener(this);
-
-        btn_Connect = (Button) findViewById(R.id.button_on);
-        btn_Connect.setOnClickListener(this);
 
         if(btService == null) {
             btService = new BluetoothService(this, mHandler);
