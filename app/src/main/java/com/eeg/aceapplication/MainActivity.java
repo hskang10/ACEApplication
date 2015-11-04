@@ -566,7 +566,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
             if(state == ConnectionState.CONNECTED) {
                 appStatus = AppStatus.MEASURING;
-
+/*
                 Thread worker = new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -576,7 +576,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
                         }
 
                     }
-                }).start();
+                }).start();*/
             }
             else
                 Toast.makeText(getApplicationContext(), "Not connected with MUSE!", Toast.LENGTH_LONG).show();
