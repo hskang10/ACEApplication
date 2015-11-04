@@ -18,12 +18,12 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.ace.project.complex.Complex;
 import com.ace.project.signalprocess.eeg.concentration.Concentration;
 import com.ace.project.signalprocess.eeg.power.EegPower;
 import com.ace.project.signalprocess.filter.Window;
-import com.ace.project.signalprocess.power.SignalPower;
 import com.ace.project.signalprocess.transform.FFT;
 import com.interaxon.libmuse.Battery;
 import com.interaxon.libmuse.ConnectionState;
@@ -50,7 +50,9 @@ import com.jjoe64.graphview.series.LineGraphSeries;
 import java.io.File;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 
 /**
@@ -58,7 +60,6 @@ import java.util.List;
  * EEG : 220Hz
  * Accelerometer : 50Hz
  */
-
 
 public class MainActivity extends Activity implements View.OnClickListener {
     /**
@@ -120,10 +121,12 @@ public class MainActivity extends Activity implements View.OnClickListener {
         public void receiveMuseDataPacket(MuseDataPacket p) {
             switch (p.getPacketType()) {
                 case EEG:
-                    updateEeg(p.getValues());
-                    break;
-                case ACCELEROMETER:
-                    updateAccelerometer(p.getValues());
+                    if(appStatus == AppStatus.MEASURING) {
+                        getEeg(p.getValues());
+                    }
+                    else if(appStatus == AppStatus.PLAYING) {
+
+                    }
                     break;
                 case BATTERY:
                     updateBattery(p.getValues());
@@ -146,18 +149,82 @@ public class MainActivity extends Activity implements View.OnClickListener {
             }
         }
 
-        private void updateAccelerometer(final ArrayList<Double> data) {
-            Activity activity = activityRef.get();
-            if (activity != null) {
-                //    Runnable task = () -> {};
-
-                //    activity.runOnUiThread(task);
-            }
+        private void getEeg(final ArrayList<Double> data) {
+            eegDataFP1[numOfMeasuredData] = data.get(Eeg.FP1.ordinal());
+            eegDataFP1[numOfMeasuredData] = data.get(Eeg.FP2.ordinal());
+            numOfQueueData++;
         }
 
         private void updateEeg(final ArrayList<Double> data) {
             Activity activity = activityRef.get();
             if (activity != null) {
+
+                final Handler handlerEEG = new Handler();
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+
+
+                        if (eegIdx < SAMPLERATE_EEG - 1) {
+                            double leftForehead = data.get(Eeg.FP1.ordinal());
+                            double rightForehead = data.get(Eeg.FP2.ordinal());
+
+                            eegDataFP1[eegIdx] = leftForehead;
+                            eegDataFP2[eegIdx] = rightForehead;
+
+                            eegIdx++;
+                        }
+
+                        else if (eegIdx == SAMPLERATE_EEG - 1) {
+
+                            eegFFT = FFT.fft(Window.HammingWindow220(eegDataFP1), false);
+
+                            power1 = EegPower.calcTheta(eegFFT, SAMPLERATE_EEG);
+                            power2 = EegPower.calcAlpha(eegFFT, SAMPLERATE_EEG);
+                            power3 = EegPower.calcBeta(eegFFT, SAMPLERATE_EEG);
+                            power4 = EegPower.calcGamma(eegFFT, SAMPLERATE_EEG);
+                            concentration = Concentration.calcConcentration(eegFFT, SAMPLERATE_EEG);
+
+
+                            eegIdx = 0;
+                            lastX++;
+
+                            if(btService.getState() == BluetoothService.STATE_CONNECTED) {
+                                byte[] ch = new byte[]{(byte)0x0A, (byte)0xAB};
+                                btService.write(ch);
+                            }
+
+                            handlerEEG.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    TextView theta = (TextView) findViewById(R.id.theta);
+                                    TextView alpha = (TextView) findViewById(R.id.alpha);
+                                    TextView beta = (TextView) findViewById(R.id.beta);
+                                    TextView gamma = (TextView) findViewById(R.id.gamma);
+
+
+                                    theta.setText(String.format(
+                                            "%6.2f", power1));
+                                    alpha.setText(String.format(
+                                            "%6.2f", power2));
+                                    beta.setText(String.format(
+                                            "%6.2f", power3));
+                                    gamma.setText(String.format(
+                                            "%6.2f", power4));
+
+                                    addEntry(seriesTheta, power1); // draw graph
+                                    addEntry(seriesAlpha, power2);
+                                    addEntry(seriesBeta, power3);
+                                    addEntry(seriesGamma, power4);
+                                    addEntry(seriesConcentration, 50 * concentration);
+                                }
+
+                            });
+                        }
+                    }
+                }).start();
+
+                /*
                 activity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -184,8 +251,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
                         if (eegIdx == SAMPLERATE_EEG - 1) {
 
-                            startchecktime = System.nanoTime();
-
                             eegFFT = FFT.fft(Window.HammingWindow220Hz(eegData1), false);
 
                             power1 = EegPower.calcTheta(eegFFT, SAMPLERATE_EEG);
@@ -194,7 +259,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
                             power4 = EegPower.calcGamma(eegFFT, SAMPLERATE_EEG);
                             concentration = Concentration.calcConcentration(eegFFT, SAMPLERATE_EEG);
 
-                            endchecktime = System.nanoTime();
 
                             theta.setText(String.format(
                                     "%6.2f", power1));
@@ -211,9 +275,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
                             addEntry(seriesGamma, power4);
                             addEntry(seriesConcentration, 50 * concentration);
 
-                            double[] freqpower = SignalPower.calcPower(eegFFT);
-                            updateFreq(seriesFreq, freqpower);
-
                             eegIdx = 0;
                             lastX++;
 
@@ -224,7 +285,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
                             }
                         }
                     }
-                });
+                });*/
 
             }
         }
@@ -287,30 +348,44 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
     private static final String TAG = "Main";
 
-    // Intent request code
-    private static final int REQUEST_CONNECT_DEVICE = 1;
-    private static final int REQUEST_ENABLE_BT = 2;
-
-    private Button btn_Connect;
-    private TextView txt_Result;
-
-    private BluetoothService btService = null;
-
+    // Basic
     private Muse muse = null;
     private ConnectionListener connectionListener = null;
     private DataListener dataListener = null;
     private boolean dataTransmission = true;
     private MuseFileWriter fileWriter = null;
 
-    private static final int SAMPLERATE_EEG = 220;
+    // Bluetooth
+    private static final int REQUEST_CONNECT_DEVICE = 1;
+    private static final int REQUEST_ENABLE_BT = 2;
+    private BluetoothService btService = null;
+    private BluetoothAdapter mBluetoothAdapter = null;
 
-    // ArrayList that contains eegData
-    private double[] eegData1 = new double[SAMPLERATE_EEG];
-    private double[] eegData2 = new double[SAMPLERATE_EEG];
-    private double[] eegData3 = new double[SAMPLERATE_EEG];
-    private double[] eegData4 = new double[SAMPLERATE_EEG];
+
+
+    private enum AppStatus {
+        STOP, MEASURING, MEASURED, PLAYING
+    }
+    AppStatus appStatus;
+
+
+    // EEG power
+    private static final int SAMPLERATE_EEG = 220;
+    private int eegIdx = 0;
+    double power1, power2, power3, power4, concentration;
+
+    private Queue<Double> queueFP1 = new LinkedList<Double>();
+    private Queue<Double> queueFP2 = new LinkedList<Double>();
+    private int numOfQueueData = 0;
+
+    private double[] eegDataFP1 = new double[SAMPLERATE_EEG * 60];
+    private double[] eegDataFP2 = new double[SAMPLERATE_EEG * 60];
+    private int numOfMeasuredData = 0;
     private Complex[] eegFFT;
 
+
+
+    // Graph
     private LineGraphSeries<DataPoint> seriesTheta;
     private LineGraphSeries<DataPoint> seriesAlpha;
     private LineGraphSeries<DataPoint> seriesBeta;
@@ -318,28 +393,14 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private LineGraphSeries<DataPoint> seriesConcentration;
     private LineGraphSeries<DataPoint> seriesFreq;
 
-    double power1, power2, power3, power4, concentration;
-
-    private int eegIdx = 0;
-    private long startchecktime = 0;
-    private long endchecktime = 0;
-
-
-    GraphView graph;
-    GraphView graphFreq;
-    Viewport viewport;
-    Viewport viewportfreq;
-
-    public static String EXTRA_DEVICE_ADDRESS = "device_address";
-
-    private BluetoothAdapter mBluetoothAdapter = null;
-
-
     private int lastX = 0;
     private int graphLastXValue = 5;
+    GraphView graph;
+    Viewport viewport;
+
+
 
     private final Handler mHandler = new Handler() {
-
         @Override
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
@@ -370,6 +431,17 @@ public class MainActivity extends Activity implements View.OnClickListener {
         Button pauseButton = (Button) findViewById(R.id.pause);
         pauseButton.setOnClickListener(this);
 
+        Button measureStartButton = (Button) findViewById(R.id.measure_start);
+        measureStartButton.setOnClickListener(this);
+        Button gameStartButton = (Button) findViewById(R.id.game_start);
+        gameStartButton.setOnClickListener(this);
+        Button gameStopButton = (Button) findViewById(R.id.game_stop);
+        gameStopButton.setOnClickListener(this);
+
+        CheckBox check0 = (CheckBox) findViewById(R.id.check0);
+        check0.setOnClickListener(this);
+
+
         if(btService == null) {
             btService = new BluetoothService(this, mHandler);
         }
@@ -384,11 +456,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
         dataListener.setFileWriter(fileWriter);
 
 
-        CheckBox check0 = (CheckBox) findViewById(R.id.check0);
-        check0.setOnClickListener(this);
+        appStatus = AppStatus.STOP;
 
         graph = (GraphView) findViewById(R.id.graph);
-        graphFreq = (GraphView) findViewById(R.id.graphfreq);
 
         viewport = graph.getViewport();
         viewport.setYAxisBoundsManual(true);
@@ -399,17 +469,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
         viewport.setXAxisBoundsManual(true);
         viewport.setMaxX(40);
         viewport.setMinX(0);
-
-        viewportfreq = graphFreq.getViewport();
-        viewportfreq.setYAxisBoundsManual(true);
-        viewportfreq.setScrollable(false);
-        viewportfreq.setMinX(0);
-        viewportfreq.setMaxY(10);
-        viewportfreq.setMinY(0);
-        viewportfreq.setXAxisBoundsManual(true);
-        viewportfreq.setMaxX(50);
-        viewportfreq.setMinX(0);
-
 
         seriesTheta = new LineGraphSeries<DataPoint>(new DataPoint[]{});
         seriesAlpha = new LineGraphSeries<DataPoint>(new DataPoint[]{});
@@ -424,14 +483,11 @@ public class MainActivity extends Activity implements View.OnClickListener {
         graph.addSeries(seriesBeta);
         graph.addSeries(seriesGamma);
         graph.addSeries(seriesConcentration);
-        graphFreq.addSeries(seriesFreq);
         seriesTheta.setColor(Color.parseColor("#b98e8e"));
         seriesAlpha.setColor(Color.parseColor("#0024ff"));
         seriesBeta.setColor(Color.parseColor("#00ff0c"));
         seriesGamma.setColor(Color.parseColor("#8400ff"));
         seriesConcentration.setColor(Color.parseColor("#ff0000"));
-        seriesFreq.setColor(Color.parseColor("#020202"));
-        seriesFreq.setBackgroundColor(Color.parseColor("#020202"));
 
 
         seriesTheta.setTitle("Theta");
@@ -450,14 +506,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
             series.appendData(new DataPoint(lastX, data), false, 50);
         else
             series.appendData(new DataPoint(lastX, data), true, 50);
-    }
-
-    private void updateFreq(LineGraphSeries<DataPoint> series, double[] power) {
-        DataPoint[] data = new DataPoint[50];
-        for (int i = 0; i < 50; i++)
-            data[i] = new DataPoint(i, power[i]);
-
-        series.resetData(data);
     }
 
     @Override
@@ -513,15 +561,42 @@ public class MainActivity extends Activity implements View.OnClickListener {
             if (muse != null) {
                 muse.enableDataTransmission(dataTransmission);
             }
-        }
-/*
-        else if(v.getId() == R.id.button_on) {
-            if (btService.getDeviceState()) {
-                btService.enableBluetooth();
-            } else {
-                finish();
+        } else if (v.getId() == R.id.measure_start) {
+            ConnectionState state = muse.getConnectionState();
+
+            if(state == ConnectionState.CONNECTED) {
+                appStatus = AppStatus.MEASURING;
+
+                Thread worker = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        while(appStatus == AppStatus.MEASURING);
+                        for(int i = 0; i < 220 * 60; i++) {
+                            int j = 0;
+                        }
+
+                    }
+                }).start();
             }
-        }*/
+            else
+                Toast.makeText(getApplicationContext(), "Not connected with MUSE!", Toast.LENGTH_LONG).show();
+        } else if(v.getId() == R.id.game_start) {
+            ConnectionState state = muse.getConnectionState();
+
+            if(state == ConnectionState.CONNECTED && appStatus == AppStatus.MEASURED) {
+                // 게임 시작!
+            }
+            else {
+                // ㄴㄴ
+            }
+        } else if(v.getId() == R.id.game_stop) {
+            if(appStatus == AppStatus.PLAYING) {
+                // 게임 중지
+            }
+            else {
+                //ㄴㄴ
+            }
+        }
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
