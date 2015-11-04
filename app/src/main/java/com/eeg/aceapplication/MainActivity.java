@@ -121,7 +121,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         public void receiveMuseDataPacket(MuseDataPacket p) {
             switch (p.getPacketType()) {
                 case EEG:
-                    if(appStatus == AppStatus.MEASURING) {
+                    if(appStatus == AppStatus.READING) {
                         getEeg(p.getValues());
                     }
                     else if(appStatus == AppStatus.PLAYING) {
@@ -150,8 +150,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
         }
 
         private void getEeg(final ArrayList<Double> data) {
-            eegDataFP1[numOfMeasuredData] = data.get(Eeg.FP1.ordinal());
-            eegDataFP1[numOfMeasuredData] = data.get(Eeg.FP2.ordinal());
+            queueFP1.add(data.get(Eeg.FP1.ordinal()));
+            queueFP2.add(data.get(Eeg.FP2.ordinal()));
             numOfQueueData++;
         }
 
@@ -364,7 +364,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
 
     private enum AppStatus {
-        STOP, MEASURING, MEASURED, PLAYING
+        STOP, READING, CALCULATING, MEASURED, PLAYING
     }
     AppStatus appStatus;
 
@@ -380,9 +380,14 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
     private double[] eegDataFP1 = new double[SAMPLERATE_EEG * 60];
     private double[] eegDataFP2 = new double[SAMPLERATE_EEG * 60];
+    private double result = 0;
     private int numOfMeasuredData = 0;
     private Complex[] eegFFT;
 
+    private double measured_f1 = 0;
+    private double measured_f2 = 0;
+    private double measured_f3 = 0;
+    private double measured_f4 = 0;
 
 
     // Graph
@@ -565,18 +570,80 @@ public class MainActivity extends Activity implements View.OnClickListener {
             ConnectionState state = muse.getConnectionState();
 
             if(state == ConnectionState.CONNECTED) {
-                appStatus = AppStatus.MEASURING;
-/*
-                Thread worker = new Thread(new Runnable() {
+                appStatus = AppStatus.READING;
+                final Handler handler_calc = new Handler();
+                new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        while(appStatus == AppStatus.MEASURING);
-                        for(int i = 0; i < 220 * 60; i++) {
-                            int j = 0;
+                        while(appStatus == AppStatus.READING) {
+                            if(numOfMeasuredData >= 13200) {
+                                appStatus = AppStatus.CALCULATING;
+                                break;
+                            }
                         }
 
+                        double f2_sum1 = 0;
+                        double f3_sum1 = 0;
+                        double f4_sum1 = 0;
+
+                        double f1_sum2 = 0;
+                        double f2_sum2 = 0;
+                        double f3_sum2 = 0;
+                        double f4_sum2 = 0;
+
+                        for(int i = 0; i < 12; i++) {
+                            Complex[] eegFFTFP1;
+                            Complex[] eegFFTFP2;
+
+                            for(int j = 0; j < 1100; j++) {
+                                eegDataFP1[j] = queueFP1.remove();
+                                eegDataFP2[j] = queueFP2.remove();
+                            }
+
+                            eegFFTFP1 = FFT.fft(Window.HammingWindow1100(eegDataFP1), false);
+                            eegFFTFP2 = FFT.fft(Window.HammingWindow1100(eegDataFP2), false);
+
+                            double SMR1 = EegPower.calcSMR(eegFFTFP1, SAMPLERATE_EEG);
+                            double Gamma1 = EegPower.calcGamma(eegFFTFP1, SAMPLERATE_EEG);
+                            double HighBeta1 = EegPower.calcHighBeta(eegFFTFP1, SAMPLERATE_EEG);
+                            double MidBeta1 = EegPower.calcMidBeta(eegFFTFP1, SAMPLERATE_EEG);
+
+                            double SMR2 = EegPower.calcSMR(eegFFTFP2, SAMPLERATE_EEG);
+                            double Theta2 = EegPower.calcTheta(eegFFTFP2, SAMPLERATE_EEG);
+                            double Gamma2 = EegPower.calcGamma(eegFFTFP2, SAMPLERATE_EEG);
+                            double HighBeta2 = EegPower.calcHighBeta(eegFFTFP2, SAMPLERATE_EEG);
+                            double MidBeta2 = EegPower.calcMidBeta(eegFFTFP2, SAMPLERATE_EEG);
+
+                            f2_sum1 += SMR1 / HighBeta1;
+                            f3_sum1 += SMR1 / MidBeta1;
+                            f4_sum1 += SMR1 / Gamma1;
+
+                            f1_sum2 += Theta2 / Gamma2;
+                            f2_sum2 += SMR2 / HighBeta2;
+                            f3_sum2 += SMR2 / MidBeta2;
+                            f4_sum2 += SMR2 / Gamma2;
+
+
+                        }
+
+                        measured_f1 = f1_sum2;
+                        measured_f2 = (f2_sum1 + f2_sum2) / 2;
+                        measured_f3 = (f3_sum1 + f3_sum2) / 2;
+                        measured_f4 = (f4_sum1 + f4_sum2) / 2;
+
+                        appStatus = AppStatus.MEASURED;
+                        handler_calc.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(getApplicationContext(), "Measuring Completed", Toast.LENGTH_LONG).show();
+                                Toast.makeText(getApplicationContext(), "f1 = " + measured_f1, Toast.LENGTH_LONG).show();
+                                Toast.makeText(getApplicationContext(), "f2 = " + measured_f2, Toast.LENGTH_LONG).show();
+                                Toast.makeText(getApplicationContext(), "f3 = " + measured_f3, Toast.LENGTH_LONG).show();
+                                Toast.makeText(getApplicationContext(), "f4 = " + measured_f4, Toast.LENGTH_LONG).show();
+                            }
+                        });
                     }
-                }).start();*/
+                }).start();
             }
             else
                 Toast.makeText(getApplicationContext(), "Not connected with MUSE!", Toast.LENGTH_LONG).show();
