@@ -74,9 +74,11 @@ public class MainActivity extends Activity implements View.OnClickListener {
     class MeasureBasePowerTask extends AsyncTask<Void, Void, Void> {
 
         ProgressDialog dialog = new ProgressDialog(MainActivity.this);
+        int progress = 0;
 
         @Override
         protected void onPreExecute() {
+            appStatus = AppStatus.MEASURING;
             dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
             dialog.setMessage("측정중입니다");
             dialog.show();
@@ -87,8 +89,10 @@ public class MainActivity extends Activity implements View.OnClickListener {
         protected Void doInBackground(Void... params) {
 
             while (appStatus == AppStatus.MEASURING) {
+                progress = numOfQueueData / 13200;
+                dialog.setProgress(progress);
                 if (numOfQueueData >= 13200) {
-                    appStatus = AppStatus.CALCULATING;
+                    break;
                 }
             }
 
@@ -97,27 +101,84 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
         @Override
         protected void onPostExecute(Void aVoid) {
-
+            dialog.dismiss();
             calculateBasePowerTask.execute();
-
             super.onPostExecute(aVoid);
         }
     }
 
     class CalculateBasePowerTask extends AsyncTask<Void, Void, Void> {
+
+        ProgressDialog dialog = new ProgressDialog(MainActivity.this);
+        int progress = 0;
+
         @Override
         protected void onPreExecute() {
+            appStatus = AppStatus.CALCULATING;
+            dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+            dialog.setMessage("계산중입니다");
+            dialog.show();
             super.onPreExecute();
         }
 
         @Override
         protected Void doInBackground(Void... params) {
+            double f2_sum1 = 0;
+            double f3_sum1 = 0;
+            double f4_sum1 = 0;
+
+            double f1_sum2 = 0;
+            double f2_sum2 = 0;
+            double f3_sum2 = 0;
+            double f4_sum2 = 0;
+
+            for (int i = 0; i < 12; i++) {
+                Complex[] eegFFTFP1;
+                Complex[] eegFFTFP2;
+
+                for (int j = 0; j < 1100; j++) {
+                    eegDataFP1[j] = queueFP1.remove();
+                    eegDataFP2[j] = queueFP2.remove();
+                    progress++;
+                    dialog.setProgress(progress / 13200);
+                }
+
+                eegFFTFP1 = FFT.fft(Window.HammingWindow1100(eegDataFP1), false);
+                eegFFTFP2 = FFT.fft(Window.HammingWindow1100(eegDataFP2), false);
+
+                double SMR1 = EegPower.calcSMR(eegFFTFP1, SAMPLERATE_EEG);
+                double Gamma1 = EegPower.calcGamma(eegFFTFP1, SAMPLERATE_EEG);
+                double HighBeta1 = EegPower.calcHighBeta(eegFFTFP1, SAMPLERATE_EEG);
+                double MidBeta1 = EegPower.calcMidBeta(eegFFTFP1, SAMPLERATE_EEG);
+
+                double SMR2 = EegPower.calcSMR(eegFFTFP2, SAMPLERATE_EEG);
+                double Theta2 = EegPower.calcTheta(eegFFTFP2, SAMPLERATE_EEG);
+                double Gamma2 = EegPower.calcGamma(eegFFTFP2, SAMPLERATE_EEG);
+                double HighBeta2 = EegPower.calcHighBeta(eegFFTFP2, SAMPLERATE_EEG);
+                double MidBeta2 = EegPower.calcMidBeta(eegFFTFP2, SAMPLERATE_EEG);
+
+                f2_sum1 += SMR1 / HighBeta1;
+                f3_sum1 += SMR1 / MidBeta1;
+                f4_sum1 += SMR1 / Gamma1;
+
+                f1_sum2 += Theta2 / Gamma2;
+                f2_sum2 += SMR2 / HighBeta2;
+                f3_sum2 += SMR2 / MidBeta2;
+                f4_sum2 += SMR2 / Gamma2;
+            }
+
+            measured_f1 = f1_sum2;
+            measured_f2 = (f2_sum1 + f2_sum2) / 2;
+            measured_f3 = (f3_sum1 + f3_sum2) / 2;
+            measured_f4 = (f4_sum1 + f4_sum2) / 2;
+
             return null;
-        }
+    }
 
         @Override
         protected void onPostExecute(Void aVoid) {
-
+            dialog.dismiss();
+            appStatus = AppStatus.MEASURED;
             super.onPostExecute(aVoid);
         }
     }
@@ -178,9 +239,11 @@ public class MainActivity extends Activity implements View.OnClickListener {
         public void receiveMuseDataPacket(MuseDataPacket p) {
             switch (p.getPacketType()) {
                 case EEG:
-                    updateEeg(p.getValues());
                     if (appStatus == AppStatus.MEASURING) {
                         getEeg(p.getValues());
+                    }
+                    else if(appStatus == AppStatus.PLAYING) {
+                        gamming(p.getValues());
                     }
                     break;
                 case BATTERY:
@@ -210,7 +273,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
             numOfQueueData++;
         }
 
-        private void updateEeg(final ArrayList<Double> data) {
+        private void gamming(final ArrayList<Double> data) {
             Activity activity = activityRef.get();
 
 
@@ -230,38 +293,42 @@ public class MainActivity extends Activity implements View.OnClickListener {
                             eegIdx++;
                         } else if (eegIdx == SAMPLERATE_EEG - 1) {
 
-                            eegFFT = FFT.fft(Window.HammingWindow220(eegData1), false);
+                            eegFFT1 = FFT.fft(Window.HammingWindow220(eegData1), false);
+                            eegFFT2 = FFT.fft(Window.HammingWindow220(eegData2), false);
 
-                            power1 = EegPower.calcTheta(eegFFT, SAMPLERATE_EEG);
-                            power2 = EegPower.calcAlpha(eegFFT, SAMPLERATE_EEG);
-                            power3 = EegPower.calcBeta(eegFFT, SAMPLERATE_EEG);
-                            power4 = EegPower.calcGamma(eegFFT, SAMPLERATE_EEG);
-                            concentration = Concentration.calcConcentration(eegFFT, SAMPLERATE_EEG);
+                            switch(powerSelect) {
+                                case POWER1:
+                                    double f1 = EegPower.calcTheta(eegFFT2, SAMPLERATE_EEG) / EegPower.calcGamma(eegFFT2, SAMPLERATE_EEG);
+                                    power = f1 / measured_f1;
+                                    break;
+                                case POWER2:
+                                    double f2 = ((EegPower.calcSMR(eegFFT1, SAMPLERATE_EEG) / EegPower.calcHighBeta(eegFFT1, SAMPLERATE_EEG)) +
+                                            (EegPower.calcSMR(eegFFT2, SAMPLERATE_EEG) / EegPower.calcHighBeta(eegFFT2, SAMPLERATE_EEG)))/2;
+                                    power = f2 / measured_f2;
+                                    break;
+                                case POWER3:
+                                    double f3 = ((EegPower.calcSMR(eegFFT1, SAMPLERATE_EEG) / EegPower.calcMidBeta(eegFFT1, SAMPLERATE_EEG)) +
+                                            (EegPower.calcSMR(eegFFT2, SAMPLERATE_EEG) / EegPower.calcMidBeta(eegFFT2, SAMPLERATE_EEG)))/2;
+                                    power = f3 / measured_f3;
+                                    break;
+                                case POWER4:
+                                    double f4 = ((EegPower.calcSMR(eegFFT1, SAMPLERATE_EEG) / EegPower.calcGamma(eegFFT1, SAMPLERATE_EEG)) +
+                                            (EegPower.calcSMR(eegFFT2, SAMPLERATE_EEG) / EegPower.calcGamma(eegFFT2, SAMPLERATE_EEG)))/2;
+                                    power = f4 / measured_f4;
+                                    break;
 
+                            }
 
                             handler_EEG.post(new Runnable() {
                                 @Override
                                 public void run() {
                                     if (eegIdx == SAMPLERATE_EEG - 1) {
-                                        TextView theta = (TextView) findViewById(R.id.theta);
-                                        TextView alpha = (TextView) findViewById(R.id.alpha);
-                                        TextView beta = (TextView) findViewById(R.id.beta);
-                                        TextView gamma = (TextView) findViewById(R.id.gamma);
 
-                                        theta.setText(String.format(
-                                                "%6.2f", power1));
-                                        alpha.setText(String.format(
-                                                "%6.2f", power2));
-                                        beta.setText(String.format(
-                                                "%6.2f", power3));
-                                        gamma.setText(String.format(
-                                                "%6.2f", power4));
+                                        TextView ratio = (TextView) findViewById(R.id.power_ratio);
+                                        ratio.setText(String.format(
+                                                "%6.2f", power));
 
-                                        addEntry(seriesTheta, power1); // draw graph
-                                        addEntry(seriesAlpha, power2);
-                                        addEntry(seriesBeta, power3);
-                                        addEntry(seriesGamma, power4);
-                                        addEntry(seriesConcentration, 50 * concentration);
+                                        addEntry(seriesConcentration, power);
 
                                         lastX++;
                                         eegIdx = 0;
@@ -272,11 +339,11 @@ public class MainActivity extends Activity implements View.OnClickListener {
                                 }
                             });
 
-                            /*
+
                             if(btService.getState() == BluetoothService.STATE_CONNECTED) {
                                 byte[] ch = new byte[]{(byte)0x0A, (byte)0xAB};
                                 btService.write(ch);
-                            }*/
+                            }
                         }
                     }
                 }).start();
@@ -365,11 +432,18 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
     AppStatus appStatus;
 
+    private enum PowerSelect {
+        POWER1, POWER2, POWER3, POWER4
+    }
+
+    PowerSelect powerSelect = PowerSelect.POWER1;
+
 
     // EEG power
     private static final int SAMPLERATE_EEG = 220;
     private int eegIdx = 0;
-    double power1, power2, power3, power4, concentration;
+//    double power1, power2, power3, power4, concentration;
+    double power;
 
     private Queue<Double> queueFP1 = new LinkedList<Double>();
     private Queue<Double> queueFP2 = new LinkedList<Double>();
@@ -381,8 +455,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private double[] eegDataFP1 = new double[SAMPLERATE_EEG * 60];
     private double[] eegDataFP2 = new double[SAMPLERATE_EEG * 60];
     private double result = 0;
-    private int numOfMeasuredData = 0;
-    private Complex[] eegFFT;
+    private Complex[] eegFFT1;
+    private Complex[] eegFFT2;
 
     private double measured_f1 = 0;
     private double measured_f2 = 0;
@@ -398,15 +472,10 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private LineGraphSeries<DataPoint> seriesBeta;
     private LineGraphSeries<DataPoint> seriesGamma;
     private LineGraphSeries<DataPoint> seriesConcentration;
-    private LineGraphSeries<DataPoint> seriesFreq;
 
     private int lastX = 0;
-    private int graphLastXValue = 5;
     GraphView graph;
     Viewport viewport;
-
-    public int progressInd = 0;
-
 
     private final Handler mHandler = new Handler() {
         @Override
@@ -574,10 +643,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
                 ConnectionState state = muse.getConnectionState();
 
                 if (state == ConnectionState.CONNECTED) {
-                    /*
-                    appStatus = AppStatus.MEASURING;
-                    readFor60Sec();
-                    */
                     measureBasePowerTask.execute();
                 } else
                     Toast.makeText(getApplicationContext(), "연결된 뮤즈가 없습니다.", Toast.LENGTH_LONG).show();

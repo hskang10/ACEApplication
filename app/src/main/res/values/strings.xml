@@ -9,7 +9,7 @@
     <string name="disconnect">Disconnect</string>
     <string name="refresh">Refresh</string>
     <string name="init_val">0.0</string>
-    <string name="eeg">EEG data</string>
+    <string name="eeg">Power Ratio</string>
     <string name="accel">Accelerometer Data</string>
     <string name="horseshoe">Wearing status</string>
     <string name="version">Version:</string>
