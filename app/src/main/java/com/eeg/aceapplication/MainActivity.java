@@ -1,9 +1,11 @@
 package com.eeg.aceapplication;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.AsyncTask;
@@ -11,6 +13,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -19,6 +22,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.ProgressBar;
+import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -66,7 +70,7 @@ import fftprocessing.Main;
  * Accelerometer : 50Hz
  */
 
-public class MainActivity extends Activity implements View.OnClickListener {
+public class MainActivity extends Activity implements View.OnClickListener, RadioGroup.OnCheckedChangeListener {
     /**
      * Connection listener updates UI with new connection status
      */
@@ -89,7 +93,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         protected Void doInBackground(Void... params) {
 
             while (appStatus == AppStatus.MEASURING) {
-                progress = numOfQueueData / 13200;
+                progress = numOfQueueData / 132;
                 dialog.setProgress(progress);
                 if (numOfQueueData >= 13200) {
                     break;
@@ -102,6 +106,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         @Override
         protected void onPostExecute(Void aVoid) {
             dialog.dismiss();
+            calculateBasePowerTask = new CalculateBasePowerTask();
             calculateBasePowerTask.execute();
             super.onPostExecute(aVoid);
         }
@@ -139,8 +144,11 @@ public class MainActivity extends Activity implements View.OnClickListener {
                 for (int j = 0; j < 1100; j++) {
                     eegDataFP1[j] = queueFP1.remove();
                     eegDataFP2[j] = queueFP2.remove();
+                    numOfQueueData--;
                     progress++;
-                    dialog.setProgress(progress / 13200);
+
+                    if(progress % 132 == 0)
+                        dialog.setProgress(progress / 132);
                 }
 
                 eegFFTFP1 = FFT.fft(Window.HammingWindow1100(eegDataFP1), false);
@@ -167,10 +175,10 @@ public class MainActivity extends Activity implements View.OnClickListener {
                 f4_sum2 += SMR2 / Gamma2;
             }
 
-            measured_f1 = f1_sum2;
-            measured_f2 = (f2_sum1 + f2_sum2) / 2;
-            measured_f3 = (f3_sum1 + f3_sum2) / 2;
-            measured_f4 = (f4_sum1 + f4_sum2) / 2;
+            measured_f1 = f1_sum2 / 12;
+            measured_f2 = (f2_sum1 + f2_sum2) / 2 / 12;
+            measured_f3 = (f3_sum1 + f3_sum2) / 2 / 12;
+            measured_f4 = (f4_sum1 + f4_sum2) / 2 / 12;
 
             return null;
     }
@@ -292,6 +300,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
                             eegIdx++;
                         } else if (eegIdx == SAMPLERATE_EEG - 1) {
+                            eegIdx = 0;
+                            Log.d(TAG, "calculated!");
 
                             eegFFT1 = FFT.fft(Window.HammingWindow220(eegData1), false);
                             eegFFT2 = FFT.fft(Window.HammingWindow220(eegData2), false);
@@ -322,8 +332,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
                             handler_EEG.post(new Runnable() {
                                 @Override
                                 public void run() {
-                                    if (eegIdx == SAMPLERATE_EEG - 1) {
-
                                         TextView ratio = (TextView) findViewById(R.id.power_ratio);
                                         ratio.setText(String.format(
                                                 "%6.2f", power));
@@ -331,11 +339,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
                                         addEntry(seriesConcentration, power);
 
                                         lastX++;
-                                        eegIdx = 0;
 
                                         Log.i(TAG, "lastX = " + lastX);
-                                    }
-
                                 }
                             });
 
@@ -422,8 +427,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private BluetoothAdapter mBluetoothAdapter = null;
 
     // program
-    private MeasureBasePowerTask measureBasePowerTask = new MeasureBasePowerTask();
-    private CalculateBasePowerTask calculateBasePowerTask = new CalculateBasePowerTask();
+    private MeasureBasePowerTask measureBasePowerTask;
+    private CalculateBasePowerTask calculateBasePowerTask;
 
     // Program state
     private enum AppStatus {
@@ -442,7 +447,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
     // EEG power
     private static final int SAMPLERATE_EEG = 220;
     private int eegIdx = 0;
-//    double power1, power2, power3, power4, concentration;
     double power;
 
     private Queue<Double> queueFP1 = new LinkedList<Double>();
@@ -505,8 +509,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
         connectButton.setOnClickListener(this);
         Button disconnectButton = (Button) findViewById(R.id.disconnect);
         disconnectButton.setOnClickListener(this);
-        Button pauseButton = (Button) findViewById(R.id.pause);
-        pauseButton.setOnClickListener(this);
         Button resetGraphButton = (Button) findViewById(R.id.graph_reset);
         resetGraphButton.setOnClickListener(this);
 
@@ -517,8 +519,9 @@ public class MainActivity extends Activity implements View.OnClickListener {
         Button gameStopButton = (Button) findViewById(R.id.game_stop);
         gameStopButton.setOnClickListener(this);
 
-        CheckBox check0 = (CheckBox) findViewById(R.id.check0);
-        check0.setOnClickListener(this);
+        RadioGroup radioGroup = (RadioGroup) findViewById(R.id.radioGroup);
+        radioGroup.setOnCheckedChangeListener(this);
+
 
 
         if (btService == null) {
@@ -543,36 +546,18 @@ public class MainActivity extends Activity implements View.OnClickListener {
         viewport.setYAxisBoundsManual(true);
         viewport.setScrollable(false);
         viewport.setMinX(0);
-        viewport.setMaxY(100);
+        viewport.setMaxY(2);
         viewport.setMinY(0);
         viewport.setXAxisBoundsManual(true);
         viewport.setMaxX(40);
         viewport.setMinX(0);
 
-        seriesTheta = new LineGraphSeries<DataPoint>(new DataPoint[]{});
-        seriesAlpha = new LineGraphSeries<DataPoint>(new DataPoint[]{});
-        seriesBeta = new LineGraphSeries<DataPoint>(new DataPoint[]{});
-        seriesGamma = new LineGraphSeries<DataPoint>(new DataPoint[]{});
         seriesConcentration = new LineGraphSeries<DataPoint>(new DataPoint[]{});
 
-
-        graph.addSeries(seriesTheta);
-        graph.addSeries(seriesAlpha);
-        graph.addSeries(seriesBeta);
-        graph.addSeries(seriesGamma);
         graph.addSeries(seriesConcentration);
-        seriesTheta.setColor(Color.parseColor("#b98e8e"));
-        seriesAlpha.setColor(Color.parseColor("#0024ff"));
-        seriesBeta.setColor(Color.parseColor("#00ff0c"));
-        seriesGamma.setColor(Color.parseColor("#8400ff"));
         seriesConcentration.setColor(Color.parseColor("#ff0000"));
 
-
-        seriesTheta.setTitle("Theta");
-        seriesAlpha.setTitle("Alpha");
-        seriesBeta.setTitle("Beta");
-        seriesGamma.setTitle("Gamma");
-        seriesConcentration.setTitle("Concentration");
+        seriesConcentration.setTitle("집중도");
 
         graph.getLegendRenderer().setVisible(true);
         graph.getLegendRenderer().setAlign(LegendRenderer.LegendAlign.TOP);
@@ -627,34 +612,57 @@ public class MainActivity extends Activity implements View.OnClickListener {
                 fileWriter.flush();
                 fileWriter.close();
             }
-        } else if (v.getId() == R.id.pause) {
-            dataTransmission = !dataTransmission;
-            if (muse != null) {
-                muse.enableDataTransmission(dataTransmission);
-            }
         } else if (v.getId() == R.id.graph_reset) {
             resetGraph();
 
         } else if (v.getId() == R.id.measure_start) {
-
-            if (muse == null)
-                Toast.makeText(getApplicationContext(), "연결된 뮤즈가 없습니다.", Toast.LENGTH_LONG).show();
-            else {
-                ConnectionState state = muse.getConnectionState();
-
-                if (state == ConnectionState.CONNECTED) {
-                    measureBasePowerTask.execute();
-                } else
+            if(appStatus == AppStatus.STOP) {
+                if (muse == null)
                     Toast.makeText(getApplicationContext(), "연결된 뮤즈가 없습니다.", Toast.LENGTH_LONG).show();
+                else {
+                    ConnectionState state = muse.getConnectionState();
+
+                    if (state == ConnectionState.CONNECTED) {
+
+                        Toast.makeText(getApplicationContext(), "측정을 시작합니다", Toast.LENGTH_LONG).show();
+                        measureBasePowerTask = new MeasureBasePowerTask();
+                        measureBasePowerTask.execute();
+                        Log.d(TAG, "측정시작");
+                    } else
+                        Toast.makeText(getApplicationContext(), "연결된 뮤즈가 없습니다.", Toast.LENGTH_LONG).show();
+                }
+            } else if(appStatus == AppStatus.MEASURED) {
+                AlertDialog.Builder dialogbuild = new AlertDialog.Builder(this);
+                dialogbuild.setMessage("다시 측정하시겠습니까?").setCancelable(false).setPositiveButton("네", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                numOfQueueData = 0;
+                                measureBasePowerTask = new MeasureBasePowerTask();
+                                measureBasePowerTask.execute();
+                            }
+                        }
+                    ).setNegativeButton("아니오", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.cancel();
+                    }
+                });
+
+                AlertDialog dialog = dialogbuild.create();
+                dialog.setTitle("");
+                dialog.show();
             }
 
         } else if (v.getId() == R.id.game_start) {
             ConnectionState state = muse.getConnectionState();
 
             if (state == ConnectionState.CONNECTED && appStatus == AppStatus.MEASURED) {
-                // 게임 시작!
+                appStatus = AppStatus.PLAYING;
+                Toast.makeText(getApplicationContext(), "게임을 시작합니다", Toast.LENGTH_LONG).show();
+            } else if (appStatus == AppStatus.PLAYING) {
+                Toast.makeText(getApplicationContext(), "이미 실행중입니다.", Toast.LENGTH_LONG).show();
             } else if (state != ConnectionState.CONNECTED) {
-                Toast.makeText(getApplicationContext(), "연결된 RC카가 없습니다.", Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(), "연결된 뮤즈가 없습니다.", Toast.LENGTH_LONG).show();
             } else if (appStatus != AppStatus.MEASURED) {
                 Toast.makeText(getApplicationContext(), "기본 측정을 완료하지 않았습니다.", Toast.LENGTH_LONG).show();
             }
@@ -664,6 +672,30 @@ public class MainActivity extends Activity implements View.OnClickListener {
             } else {
                 //ㄴㄴ
             }
+        }
+    }
+
+    @Override
+    public void onCheckedChanged(RadioGroup group, int checkedId) {
+
+        eegIdx = 0;
+        switch(checkedId) {
+            case R.id.radioButton1:
+                powerSelect = PowerSelect.POWER1;
+                resetGraph();
+                break;
+            case R.id.radioButton2:
+                powerSelect = PowerSelect.POWER2;
+                resetGraph();
+                break;
+            case R.id.radioButton3:
+                powerSelect = PowerSelect.POWER3;
+                resetGraph();
+                break;
+            case R.id.radioButton4:
+                powerSelect = PowerSelect.POWER4;
+                resetGraph();
+                break;
         }
     }
 
@@ -723,11 +755,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
     private void resetGraph() {
         DataPoint[] point = {};
-        seriesAlpha.resetData(point);
-        seriesBeta.resetData(point);
         seriesConcentration.resetData(point);
-        seriesGamma.resetData(point);
-        seriesTheta.resetData(point);
         lastX = 0;
         viewport.setMinX(0);
         viewport.setMaxX(40);
@@ -742,105 +770,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
         BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
         // Attempt to connect to the device
         btService.connect(device, secure);
-    }
-
-    private void readFor60Sec() {
-        final Handler handler_calc = new Handler();
-        final ProgressDialog dialog = new ProgressDialog(MainActivity.this);
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Log.d(TAG, "Read start");
-
-                handler_calc.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        dialog.show(MainActivity.this, "", "측정중입니다.", true);
-                    }
-                });
-
-
-                while (appStatus == AppStatus.MEASURING) {
-                    if (numOfQueueData >= 13200) {
-                        appStatus = AppStatus.CALCULATING;
-
-                        handler_calc.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                dialog.dismiss();
-                                dialog.show(MainActivity.this, "", "계산중입니다.", true);
-                            }
-                        });
-
-                        break;
-                    }
-                }
-
-                double f2_sum1 = 0;
-                double f3_sum1 = 0;
-                double f4_sum1 = 0;
-
-                double f1_sum2 = 0;
-                double f2_sum2 = 0;
-                double f3_sum2 = 0;
-                double f4_sum2 = 0;
-
-                for (int i = 0; i < 12; i++) {
-                    Complex[] eegFFTFP1;
-                    Complex[] eegFFTFP2;
-
-                    for (int j = 0; j < 1100; j++) {
-                        eegDataFP1[j] = queueFP1.remove();
-                        eegDataFP2[j] = queueFP2.remove();
-                    }
-
-                    eegFFTFP1 = FFT.fft(Window.HammingWindow1100(eegDataFP1), false);
-                    eegFFTFP2 = FFT.fft(Window.HammingWindow1100(eegDataFP2), false);
-
-                    double SMR1 = EegPower.calcSMR(eegFFTFP1, SAMPLERATE_EEG);
-                    double Gamma1 = EegPower.calcGamma(eegFFTFP1, SAMPLERATE_EEG);
-                    double HighBeta1 = EegPower.calcHighBeta(eegFFTFP1, SAMPLERATE_EEG);
-                    double MidBeta1 = EegPower.calcMidBeta(eegFFTFP1, SAMPLERATE_EEG);
-
-                    double SMR2 = EegPower.calcSMR(eegFFTFP2, SAMPLERATE_EEG);
-                    double Theta2 = EegPower.calcTheta(eegFFTFP2, SAMPLERATE_EEG);
-                    double Gamma2 = EegPower.calcGamma(eegFFTFP2, SAMPLERATE_EEG);
-                    double HighBeta2 = EegPower.calcHighBeta(eegFFTFP2, SAMPLERATE_EEG);
-                    double MidBeta2 = EegPower.calcMidBeta(eegFFTFP2, SAMPLERATE_EEG);
-
-                    f2_sum1 += SMR1 / HighBeta1;
-                    f3_sum1 += SMR1 / MidBeta1;
-                    f4_sum1 += SMR1 / Gamma1;
-
-                    f1_sum2 += Theta2 / Gamma2;
-                    f2_sum2 += SMR2 / HighBeta2;
-                    f3_sum2 += SMR2 / MidBeta2;
-                    f4_sum2 += SMR2 / Gamma2;
-
-                    Log.d(TAG, "i = " + i);
-                }
-
-                measured_f1 = f1_sum2;
-                measured_f2 = (f2_sum1 + f2_sum2) / 2;
-                measured_f3 = (f3_sum1 + f3_sum2) / 2;
-                measured_f4 = (f4_sum1 + f4_sum2) / 2;
-
-                appStatus = AppStatus.MEASURED;
-
-                handler_calc.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(getApplicationContext(), "측정완료", Toast.LENGTH_LONG).show();
-                        dialog.dismiss();
-                        Toast.makeText(getApplicationContext(), "Measuring Completed", Toast.LENGTH_LONG).show();
-                        Toast.makeText(getApplicationContext(), "f1 = " + measured_f1, Toast.LENGTH_LONG).show();
-                        Toast.makeText(getApplicationContext(), "f2 = " + measured_f2, Toast.LENGTH_LONG).show();
-                        Toast.makeText(getApplicationContext(), "f3 = " + measured_f3, Toast.LENGTH_LONG).show();
-                        Toast.makeText(getApplicationContext(), "f4 = " + measured_f4, Toast.LENGTH_LONG).show();
-                    }
-                });
-            }
-        }).start();
     }
 
     private void configure_library() {

@@ -55,16 +55,49 @@
 
 
     </LinearLayout>
-
-    <LinearLayout
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="33dp">
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="33dp"
-            android:text="Reset graph"
-            android:id="@+id/graph_reset"/>
-    </LinearLayout>
+        android:layout_height="60dp">
+
+
+        <RadioGroup
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:id="@+id/radioGroup">
+
+            <RadioButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="P1"
+                android:id="@+id/radioButton1"
+                android:checked="true"
+                style="@style/AppTheme"/>
+
+            <RadioButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="P2"
+                android:id="@+id/radioButton2"
+                style="@style/AppTheme"
+                android:layout_gravity="center_horizontal"/>
+
+            <RadioButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="P3"
+                android:id="@+id/radioButton3"/>
+
+            <RadioButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="P4"
+                android:id="@+id/radioButton4"/>
+
+        </RadioGroup>
+    </RelativeLayout>
+
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="20dp"
@@ -178,11 +211,15 @@
         android:layout_width="match_parent"
         android:layout_height="200dip"
         android:id="@+id/graph" />
-    <CheckBox
-        android:id="@+id/check0"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
-
+        android:layout_height="33dp">
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="33dp"
+            android:text="Reset graph"
+            android:id="@+id/graph_reset"/>
+    </LinearLayout>
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="30dp"
@@ -205,11 +242,6 @@
             android:layout_width="match_parent"
             android:layout_height="45dp"
             android:orientation="horizontal" >
-            <Button
-                android:id="@+id/pause"
-                android:layout_width="150dp"
-                android:layout_height="40dp"
-                android:text="@string/pause" />
         </LinearLayout>
 
 </LinearLayout>
