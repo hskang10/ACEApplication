@@ -13,22 +13,18 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.ProgressBar;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.ace.project.complex.Complex;
-import com.ace.project.signalprocess.eeg.concentration.Concentration;
 import com.ace.project.signalprocess.eeg.power.EegPower;
 import com.ace.project.signalprocess.filter.Window;
 import com.ace.project.signalprocess.transform.FFT;
@@ -61,9 +57,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-import fftprocessing.Main;
-
-
 /**
  * SAMPLING RATE
  * EEG : 220Hz
@@ -84,6 +77,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
         protected void onPreExecute() {
             appStatus = AppStatus.MEASURING;
             dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+            dialog.setCancelable(false);
             dialog.setMessage("측정중입니다");
             dialog.show();
             super.onPreExecute();
@@ -121,6 +115,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
         protected void onPreExecute() {
             appStatus = AppStatus.CALCULATING;
             dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+            dialog.setCancelable(false);
             dialog.setMessage("계산중입니다");
             dialog.show();
             super.onPreExecute();
@@ -471,10 +466,6 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
 
 
     // Graph
-    private LineGraphSeries<DataPoint> seriesTheta;
-    private LineGraphSeries<DataPoint> seriesAlpha;
-    private LineGraphSeries<DataPoint> seriesBeta;
-    private LineGraphSeries<DataPoint> seriesGamma;
     private LineGraphSeries<DataPoint> seriesConcentration;
 
     private int lastX = 0;
@@ -549,7 +540,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
         viewport.setMaxY(2);
         viewport.setMinY(0);
         viewport.setXAxisBoundsManual(true);
-        viewport.setMaxX(40);
+        viewport.setMaxX(120);
         viewport.setMinX(0);
 
         seriesConcentration = new LineGraphSeries<DataPoint>(new DataPoint[]{});
@@ -654,18 +645,21 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
             }
 
         } else if (v.getId() == R.id.game_start) {
-            ConnectionState state = muse.getConnectionState();
+            if(muse == null) {
+                Toast.makeText(getApplicationContext(), "연결된 뮤즈가 없습니다", Toast.LENGTH_LONG).show();
+            } else {
+                ConnectionState state = muse.getConnectionState();
 
-            if (state == ConnectionState.CONNECTED && appStatus == AppStatus.MEASURED) {
-                appStatus = AppStatus.PLAYING;
-                Toast.makeText(getApplicationContext(), "게임을 시작합니다", Toast.LENGTH_LONG).show();
-            } else if (appStatus == AppStatus.PLAYING) {
-                Toast.makeText(getApplicationContext(), "이미 실행중입니다.", Toast.LENGTH_LONG).show();
-            } else if (state != ConnectionState.CONNECTED) {
-                Toast.makeText(getApplicationContext(), "연결된 뮤즈가 없습니다.", Toast.LENGTH_LONG).show();
-            } else if (appStatus != AppStatus.MEASURED) {
-                Toast.makeText(getApplicationContext(), "기본 측정을 완료하지 않았습니다.", Toast.LENGTH_LONG).show();
+                if (state == ConnectionState.CONNECTED && appStatus == AppStatus.MEASURED) {
+                    appStatus = AppStatus.PLAYING;
+                    Toast.makeText(getApplicationContext(), "게임을 시작합니다", Toast.LENGTH_LONG).show();
+                } else if (appStatus == AppStatus.PLAYING) {
+                    Toast.makeText(getApplicationContext(), "이미 실행중입니다.", Toast.LENGTH_LONG).show();
+                } else if (appStatus != AppStatus.MEASURED) {
+                    Toast.makeText(getApplicationContext(), "기본 측정을 완료하지 않았습니다.", Toast.LENGTH_LONG).show();
+                }
             }
+
         } else if (v.getId() == R.id.game_stop) {
             if (appStatus == AppStatus.PLAYING) {
                 appStatus = AppStatus.MEASURED;
@@ -747,10 +741,10 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
     }
 
     private void addEntry(LineGraphSeries<DataPoint> series, double data) {
-        if (lastX < 40)
-            series.appendData(new DataPoint(lastX, data), false, 50);
+        if (lastX < 120)
+            series.appendData(new DataPoint(lastX, data), false, 150);
         else
-            series.appendData(new DataPoint(lastX, data), true, 50);
+            series.appendData(new DataPoint(lastX, data), true, 150);
     }
 
     private void resetGraph() {
@@ -758,7 +752,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
         seriesConcentration.resetData(point);
         lastX = 0;
         viewport.setMinX(0);
-        viewport.setMaxX(40);
+        viewport.setMaxX(120);
     }
 
     private void connectDevice(Intent data, boolean secure) {
