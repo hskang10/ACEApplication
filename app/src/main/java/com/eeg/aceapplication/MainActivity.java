@@ -142,8 +142,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
                     numOfQueueData--;
                     progress++;
 
-                    if(progress % 132 == 0)
-                        dialog.setProgress(progress / 132);
+                    dialog.setProgress(progress / 132);
                 }
 
                 eegFFTFP1 = FFT.fft(Window.HammingWindow1100(eegDataFP1), false);
@@ -294,9 +293,8 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
                             eegData2[eegIdx] = rightForehead;
 
                             eegIdx++;
-                        } else if (eegIdx == SAMPLERATE_EEG - 1) {
+                        } else if (eegIdx >= SAMPLERATE_EEG - 1) {
                             eegIdx = 0;
-                            Log.d(TAG, "calculated!");
 
                             eegFFT1 = FFT.fft(Window.HammingWindow220(eegData1), false);
                             eegFFT2 = FFT.fft(Window.HammingWindow220(eegData2), false);
@@ -323,6 +321,8 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
                                     break;
 
                             }
+
+                            Log.d(TAG, "Calculated 1sec");
 
                             handler_EEG.post(new Runnable() {
                                 @Override
