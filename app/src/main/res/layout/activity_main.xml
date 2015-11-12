@@ -57,41 +57,38 @@
     </LinearLayout>
     <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="60dp">
+        android:layout_height="200dp">
 
 
         <RadioGroup
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:id="@+id/radioGroup">
 
             <RadioButton
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="P1"
+                android:text="Theta/Gamma"
                 android:id="@+id/radioButton1"
-                android:checked="true"
-                style="@style/AppTheme"/>
+                android:checked="true"/>
 
             <RadioButton
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="P2"
-                android:id="@+id/radioButton2"
-                style="@style/AppTheme"
-                android:layout_gravity="center_horizontal"/>
+                android:text="SMR/High Beta"
+                android:id="@+id/radioButton2"/>
 
             <RadioButton
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="P3"
+                android:text="SMR/Mid Beta"
                 android:id="@+id/radioButton3"/>
 
             <RadioButton
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="P4"
+                android:text="SMR/Gamma"
                 android:id="@+id/radioButton4"/>
 
         </RadioGroup>

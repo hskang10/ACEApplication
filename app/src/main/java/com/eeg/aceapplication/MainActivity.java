@@ -71,6 +71,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
     class MeasureBasePowerTask extends AsyncTask<Void, Void, Void> {
 
         ProgressDialog dialog = new ProgressDialog(MainActivity.this);
+
         int progress = 0;
 
         @Override
@@ -103,6 +104,16 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
             calculateBasePowerTask = new CalculateBasePowerTask();
             calculateBasePowerTask.execute();
             super.onPostExecute(aVoid);
+        }
+
+        @Override
+        protected void onCancelled() {
+            Log.d(TAG, "Cancelled");
+            appStatus = AppStatus.STOP;
+            queueFP1.removeAll(queueFP1);
+            queueFP2.removeAll(queueFP2);
+            numOfQueueData = 0;
+            super.onCancelled();
         }
     }
 
@@ -182,6 +193,16 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
             dialog.dismiss();
             appStatus = AppStatus.MEASURED;
             super.onPostExecute(aVoid);
+        }
+
+        @Override
+        protected void onCancelled() {
+            Log.d(TAG, "Cancelled");
+            appStatus = AppStatus.STOP;
+            queueFP1.removeAll(queueFP1);
+            queueFP2.removeAll(queueFP2);
+            numOfQueueData = 0;
+            super.onCancelled();
         }
     }
 
@@ -341,8 +362,26 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
 
 
                             if(btService.getState() == BluetoothService.STATE_CONNECTED) {
-                                byte[] ch = new byte[]{(byte)0x0A, (byte)0xAB};
-                                btService.write(ch);
+
+                                if (power > 1.25) {
+                                    byte[] ch = {'A'};
+                                    btService.write(ch);
+                                } else if (power > 1.2) {
+                                    byte[] ch = {'B'};
+                                    btService.write(ch);
+                                } else if (power > 1.15) {
+                                    byte[] ch = {'C'};
+                                    btService.write(ch);
+                                } else if (power > 1.1) {
+                                    byte[] ch = {'D'};
+                                    btService.write(ch);
+                                } else if (power > 1.05) {
+                                    byte[] ch = {'E'};
+                                    btService.write(ch);
+                                } else {
+                                    byte[] ch = {'F'};
+                                    btService.write(ch);
+                                }
                             }
                         }
                     }
@@ -378,22 +417,22 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
                         TextView horseshoe3 = (TextView) findViewById(R.id.horseshoe3);
 
                         if (data.get(Eeg.TP9.ordinal()) <= 3.0)
-                            horseshoe0.setText("FIT");
+                            horseshoe0.setText("O");
                         else
                             horseshoe0.setText("X");
 
                         if (data.get(Eeg.FP1.ordinal()) <= 3.0)
-                            horseshoe1.setText("FIT");
+                            horseshoe1.setText("O");
                         else
                             horseshoe1.setText("X");
 
                         if (data.get(Eeg.FP2.ordinal()) <= 3.0)
-                            horseshoe2.setText("FIT");
+                            horseshoe2.setText("O");
                         else
                             horseshoe2.setText("X");
 
                         if (data.get(Eeg.TP10.ordinal()) <= 3.0)
-                            horseshoe3.setText("FIT");
+                            horseshoe3.setText("O");
                         else horseshoe3.setText("X");
 
                     }
