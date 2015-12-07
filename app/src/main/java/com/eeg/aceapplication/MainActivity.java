@@ -137,11 +137,19 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
             double f2_sum1 = 0;
             double f3_sum1 = 0;
             double f4_sum1 = 0;
+            double f5_sum1 = 0;
+            double f6_sum1 = 0;
+            double f7_sum1 = 0;
+            double f8_sum1 = 0;
 
             double f1_sum2 = 0;
             double f2_sum2 = 0;
             double f3_sum2 = 0;
             double f4_sum2 = 0;
+            double f5_sum2 = 0;
+            double f6_sum2 = 0;
+            double f7_sum2 = 0;
+            double f8_sum2 = 0;
 
             for (int i = 0; i < 12; i++) {
                 Complex[] eegFFTFP1;
@@ -160,30 +168,48 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
                 eegFFTFP2 = FFT.fft(Window.HammingWindow1100(eegDataFP2), false);
 
                 double SMR1 = EegPower.calcSMR(eegFFTFP1, SAMPLERATE_EEG);
+                double Theta1 = EegPower.calcTheta(eegFFTFP1, SAMPLERATE_EEG);
                 double Gamma1 = EegPower.calcGamma(eegFFTFP1, SAMPLERATE_EEG);
+                double Beta1 = EegPower.calcBeta(eegFFTFP1, SAMPLERATE_EEG);
                 double HighBeta1 = EegPower.calcHighBeta(eegFFTFP1, SAMPLERATE_EEG);
                 double MidBeta1 = EegPower.calcMidBeta(eegFFTFP1, SAMPLERATE_EEG);
+                double Alpha1 = EegPower.calcAlpha(eegFFTFP1, SAMPLERATE_EEG);
 
                 double SMR2 = EegPower.calcSMR(eegFFTFP2, SAMPLERATE_EEG);
                 double Theta2 = EegPower.calcTheta(eegFFTFP2, SAMPLERATE_EEG);
                 double Gamma2 = EegPower.calcGamma(eegFFTFP2, SAMPLERATE_EEG);
+                double Beta2 = EegPower.calcBeta(eegFFTFP2, SAMPLERATE_EEG);
                 double HighBeta2 = EegPower.calcHighBeta(eegFFTFP2, SAMPLERATE_EEG);
                 double MidBeta2 = EegPower.calcMidBeta(eegFFTFP2, SAMPLERATE_EEG);
+                double Alpha2 = EegPower.calcAlpha(eegFFTFP2, SAMPLERATE_EEG);
 
                 f2_sum1 += SMR1 / HighBeta1;
                 f3_sum1 += SMR1 / MidBeta1;
                 f4_sum1 += SMR1 / Gamma1;
+                f5_sum1 += HighBeta1;
+                f6_sum1 += Theta1 / Beta1;
+                f7_sum1 += Theta1 / (Alpha1 + Beta1);
+                f8_sum2 += (SMR1 + MidBeta1) / Theta1;
 
                 f1_sum2 += Theta2 / Gamma2;
                 f2_sum2 += SMR2 / HighBeta2;
                 f3_sum2 += SMR2 / MidBeta2;
                 f4_sum2 += SMR2 / Gamma2;
+                f5_sum2 += HighBeta2;
+                f6_sum2 += Theta2 / Beta2;
+                f7_sum2 += Theta2 / (Alpha2 + Beta2);
+                f8_sum2 += (SMR2 + MidBeta2) / Theta2;
             }
 
             measured_f1 = f1_sum2 / 12;
             measured_f2 = (f2_sum1 + f2_sum2) / 2 / 12;
             measured_f3 = (f3_sum1 + f3_sum2) / 2 / 12;
             measured_f4 = (f4_sum1 + f4_sum2) / 2 / 12;
+            measured_f5 = (f5_sum1 + f5_sum2) / 2 / 12;
+            measured_f6 = (f6_sum1 + f6_sum2) / 2 / 12;
+            measured_f7 = (f7_sum1 + f7_sum2) / 2 / 12;
+            measured_f8 = (f8_sum1 + f8_sum2) / 2 / 12;
+
 
             return null;
     }
@@ -326,19 +352,39 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
                                     power = f1 / measured_f1;
                                     break;
                                 case POWER2:
-                                    double f2 = ((EegPower.calcSMR(eegFFT1, SAMPLERATE_EEG) / EegPower.calcHighBeta(eegFFT1, SAMPLERATE_EEG)) +
-                                            (EegPower.calcSMR(eegFFT2, SAMPLERATE_EEG) / EegPower.calcHighBeta(eegFFT2, SAMPLERATE_EEG)))/2;
+                                    double f2 = (EegPower.calcSMR(eegFFT1, SAMPLERATE_EEG) / EegPower.calcHighBeta(eegFFT1, SAMPLERATE_EEG) +
+                                            EegPower.calcSMR(eegFFT2, SAMPLERATE_EEG) / EegPower.calcHighBeta(eegFFT2, SAMPLERATE_EEG))/2;
                                     power = f2 / measured_f2;
                                     break;
                                 case POWER3:
-                                    double f3 = ((EegPower.calcSMR(eegFFT1, SAMPLERATE_EEG) / EegPower.calcMidBeta(eegFFT1, SAMPLERATE_EEG)) +
-                                            (EegPower.calcSMR(eegFFT2, SAMPLERATE_EEG) / EegPower.calcMidBeta(eegFFT2, SAMPLERATE_EEG)))/2;
+                                    double f3 = (EegPower.calcSMR(eegFFT1, SAMPLERATE_EEG) / EegPower.calcMidBeta(eegFFT1, SAMPLERATE_EEG) +
+                                            EegPower.calcSMR(eegFFT2, SAMPLERATE_EEG) / EegPower.calcMidBeta(eegFFT2, SAMPLERATE_EEG))/2;
                                     power = f3 / measured_f3;
                                     break;
                                 case POWER4:
-                                    double f4 = ((EegPower.calcSMR(eegFFT1, SAMPLERATE_EEG) / EegPower.calcGamma(eegFFT1, SAMPLERATE_EEG)) +
-                                            (EegPower.calcSMR(eegFFT2, SAMPLERATE_EEG) / EegPower.calcGamma(eegFFT2, SAMPLERATE_EEG)))/2;
+                                    double f4 = (EegPower.calcSMR(eegFFT1, SAMPLERATE_EEG) / EegPower.calcGamma(eegFFT1, SAMPLERATE_EEG) +
+                                            EegPower.calcSMR(eegFFT2, SAMPLERATE_EEG) / EegPower.calcGamma(eegFFT2, SAMPLERATE_EEG))/2;
                                     power = f4 / measured_f4;
+                                    break;
+                                case POWER5:
+                                    double f5 = (EegPower.calcHighBeta(eegFFT1, SAMPLERATE_EEG) +
+                                            EegPower.calcHighBeta(eegFFT2, SAMPLERATE_EEG))/2;
+                                    power = f5 / measured_f5;
+                                    break;
+                                case POWER6:
+                                    double f6 = (EegPower.calcTheta(eegFFT1, SAMPLERATE_EEG) / EegPower.calcBeta(eegFFT1, SAMPLERATE_EEG) +
+                                            EegPower.calcTheta(eegFFT2, SAMPLERATE_EEG) / EegPower.calcBeta(eegFFT2, SAMPLERATE_EEG))/2;
+                                    power = f6 / measured_f6;
+                                    break;
+                                case POWER7:
+                                    double f7 = (EegPower.calcTheta(eegFFT1, SAMPLERATE_EEG) / (EegPower.calcAlpha(eegFFT1, SAMPLERATE_EEG) + EegPower.calcBeta(eegFFT1, SAMPLERATE_EEG)) +
+                                            EegPower.calcTheta(eegFFT2, SAMPLERATE_EEG) / (EegPower.calcAlpha(eegFFT2, SAMPLERATE_EEG) + EegPower.calcBeta(eegFFT2, SAMPLERATE_EEG)))/2;
+                                    power = f7 / measured_f7;
+                                    break;
+                                case POWER8:
+                                    double f8 = ((EegPower.calcSMR(eegFFT1, SAMPLERATE_EEG) + EegPower.calcMidBeta(eegFFT1, SAMPLERATE_EEG)) / EegPower.calcTheta(eegFFT1, SAMPLERATE_EEG) +
+                                            (EegPower.calcSMR(eegFFT2, SAMPLERATE_EEG) + EegPower.calcMidBeta(eegFFT2, SAMPLERATE_EEG)) / EegPower.calcTheta(eegFFT2, SAMPLERATE_EEG))/2;
+                                    power = f8 / measured_f8;
                                     break;
 
                             }
@@ -472,7 +518,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
     AppStatus appStatus;
 
     private enum PowerSelect {
-        POWER1, POWER2, POWER3, POWER4
+        POWER1, POWER2, POWER3, POWER4, POWER5, POWER6, POWER7, POWER8
     }
 
     PowerSelect powerSelect = PowerSelect.POWER1;
@@ -500,6 +546,10 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
     private double measured_f2 = 0;
     private double measured_f3 = 0;
     private double measured_f4 = 0;
+    private double measured_f5 = 0;
+    private double measured_f6 = 0;
+    private double measured_f7 = 0;
+    private double measured_f8 = 0;
 
     final Handler handler_EEG = new Handler();
 
@@ -702,6 +752,10 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
         } else if (v.getId() == R.id.game_stop) {
             if (appStatus == AppStatus.PLAYING) {
                 appStatus = AppStatus.MEASURED;
+                if(btService.getState() == BluetoothService.STATE_CONNECTED) {
+                    byte[] ch = {'F'};
+                    btService.write(ch);
+                }
             } else {
                 //ㄴㄴ
             }
@@ -727,6 +781,22 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
                 break;
             case R.id.radioButton4:
                 powerSelect = PowerSelect.POWER4;
+                resetGraph();
+                break;
+            case R.id.radioButton5:
+                powerSelect = PowerSelect.POWER5;
+                resetGraph();
+                break;
+            case R.id.radioButton6:
+                powerSelect = PowerSelect.POWER6;
+                resetGraph();
+                break;
+            case R.id.radioButton7:
+                powerSelect = PowerSelect.POWER7;
+                resetGraph();
+                break;
+            case R.id.radioButton8:
+                powerSelect = PowerSelect.POWER8;
                 resetGraph();
                 break;
         }

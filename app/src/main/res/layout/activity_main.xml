@@ -28,7 +28,7 @@
             android:text="@string/connect" />
         <Button
             android:id="@+id/disconnect"
-            android:layout_width="120dp"
+            android:layout_width="100dp"
             android:layout_height="40dp"
             android:text="@string/disconnect" />
 
@@ -38,18 +38,18 @@
         android:layout_width="match_parent"
         android:layout_height="33dp">
         <Button
-            android:layout_width="wrap_content"
-            android:layout_height="33dp"
-            android:text="Measure Start"
+            android:layout_width="100dp"
+            android:layout_height="40dp"
+            android:text="Measure"
             android:id="@+id/measure_start"/>
         <Button
-            android:layout_width="wrap_content"
-            android:layout_height="33dp"
+            android:layout_width="100dp"
+            android:layout_height="40dp"
             android:text="Game Start"
             android:id="@+id/game_start"/>
         <Button
-            android:layout_width="wrap_content"
-            android:layout_height="33dp"
+            android:layout_width="100dp"
+            android:layout_height="40dp"
             android:text="Game Stop"
             android:id="@+id/game_stop"/>
 
@@ -57,7 +57,7 @@
     </LinearLayout>
     <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="200dp">
+        android:layout_height="250dp">
 
 
         <RadioGroup
@@ -65,31 +65,72 @@
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:id="@+id/radioGroup">
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
 
-            <RadioButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Theta/Gamma"
-                android:id="@+id/radioButton1"
-                android:checked="true"/>
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Theta/Gamma"
+                    android:id="@+id/radioButton1"
+                    android:checked="true"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentStart="true" />
 
-            <RadioButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="SMR/High Beta"
-                android:id="@+id/radioButton2"/>
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SMR/High Beta"
+                    android:id="@+id/radioButton2"
+                    android:layout_alignParentTop="true"
+                    android:layout_toEndOf="@+id/radioButton1" />
 
-            <RadioButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="SMR/Mid Beta"
-                android:id="@+id/radioButton3"/>
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SMR/Mid Beta"
+                    android:id="@+id/radioButton3"
+                    android:layout_alignTop="@+id/radioButton4"
+                    android:layout_alignParentStart="true" />
 
-            <RadioButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="SMR/Gamma"
-                android:id="@+id/radioButton4"/>
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SMR/Gamma"
+                    android:id="@+id/radioButton4"
+                    android:layout_below="@+id/radioButton2"
+                    android:layout_toEndOf="@+id/radioButton1" />
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="High Beta"
+                    android:id="@+id/radioButton5"
+                    android:layout_below="@+id/radioButton3"
+                    android:layout_alignParentStart="true" />
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Theta / Beta"
+                    android:id="@+id/radioButton6"
+                    android:layout_below="@+id/radioButton3"
+                    android:layout_toEndOf="@+id/radioButton3" />
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Theta / (Alpha + Beta)"
+                    android:id="@+id/radioButton7"
+                    android:layout_below="@+id/radioButton5"
+                    android:layout_alignParentStart="true" />
+                <RadioButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="(SMR + Mid Beta) / Theta"
+                    android:id="@+id/radioButton8"
+                    android:layout_below="@+id/radioButton7"
+                    android:layout_alignParentStart="true" />
+            </RelativeLayout>
+
 
         </RadioGroup>
     </RelativeLayout>
