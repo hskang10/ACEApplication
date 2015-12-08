@@ -462,24 +462,10 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
                         TextView horseshoe2 = (TextView) findViewById(R.id.horseshoe2);
                         TextView horseshoe3 = (TextView) findViewById(R.id.horseshoe3);
 
-                        if (data.get(Eeg.TP9.ordinal()) <= 3.0)
-                            horseshoe0.setText("O");
-                        else
-                            horseshoe0.setText("X");
-
-                        if (data.get(Eeg.FP1.ordinal()) <= 3.0)
-                            horseshoe1.setText("O");
-                        else
-                            horseshoe1.setText("X");
-
-                        if (data.get(Eeg.FP2.ordinal()) <= 3.0)
-                            horseshoe2.setText("O");
-                        else
-                            horseshoe2.setText("X");
-
-                        if (data.get(Eeg.TP10.ordinal()) <= 3.0)
-                            horseshoe3.setText("O");
-                        else horseshoe3.setText("X");
+                        horseshoe0.setText(data.get(Eeg.TP9.ordinal()) <= 3.0 ? "O" : "X");
+                        horseshoe1.setText(data.get(Eeg.FP1.ordinal()) <= 3.0 ? "O" : "X");
+                        horseshoe2.setText(data.get(Eeg.FP2.ordinal()) <= 3.0 ? "O" : "X");
+                        horseshoe3.setText(data.get(Eeg.TP10.ordinal()) <= 3.0 ? "O" : "X");
 
                     }
                 });
@@ -675,7 +661,7 @@ public class MainActivity extends Activity implements View.OnClickListener, Radi
                     return;
                 }
                 configure_library();
-                fileWriter.open();
+               fileWriter.open();
                 fileWriter.addAnnotationString(1, "Connect clicked");
 
                 try {
